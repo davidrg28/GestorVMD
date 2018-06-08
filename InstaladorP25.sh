@@ -50,7 +50,7 @@ if [ "$#" -eq "0" ]
 		cd "$UBC/programa"
 		cp -Rf * "$HOME/$DIRDS"
 		cp -Rf "funciones/.ControlPRL" "$HOME/$DIRDS/funciones/ControlPR"
-		mkdir "$HOME/$DIRDS/listado"
+		mkdir "$HOME/$DIRDS/programa/listado"
 		cd "$HOME"
 		chmod -R 700 "$DIRDS"
 		COMB
