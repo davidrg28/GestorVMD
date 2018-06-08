@@ -1,0 +1,1043 @@
+#!/bin/bash
+
+<<C1
+Este es el script de que almacena todas las funciones.
+La funcion "MMENUP" es el menú principal del script desde el se van a distintas partes.
+MMENU es el menú que muestra las maquinas virtuales actuales y te dicen si estan encendidas o no.
+
+C1
+
+
+#----------------------Menú principal-----------------M1--------------
+#Esta Función es el menú principal, desde este menú podemos acceder a 2 menú distinto los cuales realmente son como 2 script distinto separado en funciones.
+function MMENUP {
+	BUCL="n"
+	while [ "$BUCL" = "n" ]
+	do
+		clear
+		echo -e "Este es el menú principal del script.\nEste menú puedes escoger si gestionar el funcionamiento de una maquina virtual, editarla o crearla."
+		echo -e "-------------------------------------------------------------------"
+		echo -e "1. Menú para gestionar el funcionamiento de una maquina virtual(encendido,apagado,eliminarla...)."
+		echo -e "2. Menú para crear una maquina virtual."
+		echo -e "3. Salir del script."
+		read -e -n 1 OPCMMP
+		case "$OPCMMP"
+		in
+		"1")
+			BUCL="s"
+			MMENU
+		;;
+		"2")
+			BUCL88="n"
+			while [ "$BUCL88" = "n" ]
+			do
+				clear
+				echo -e "En este apartado tenemos dos menú uno que nos preconfigurara las maquinas virtuales y\notro que nos llevara por un proceso de configuración manual."
+				sleep 0.3
+				echo -e "En ambos casos se requieren conocimientos avanzados para esta parte del script y se debe usar con precaupcion."
+				echo -e "1. Menú de maquinas preconfiguradas.\n2. Menú de configuración manual.\n3. Volver al menú anterior."
+				read -e -n 1 OMCR
+				case "$OMCR"
+				in
+				"1")
+					BUCL88="s"
+					EDRP
+				;;
+				"2")
+					BUCL88="s"
+					CREARVMD
+				;;
+				"3")
+					BUCL88="s"
+					MMENUP
+				;;
+				*)
+				;;
+				esac
+			done
+		;;
+		"3")
+			clear
+			echo -e "Saliendo del script."
+			BUCL="s"
+		;;
+		*)
+		;;
+		esac
+	done
+}
+
+
+#---------------Menú para gestionar las maquinas virtuales disponibles---------------M2-------------------
+#Función para mostrar una de las maquinas virtuales disponible, si estan encendidas o no.
+function MMENU {
+	clear
+	CONFIR="n"
+	BUCL="n"
+	while [ "$BUCL" = "n" ]
+	do
+		clear
+		echo -e "Aqui estan todas las maquinas virtuales disponible en este ordenador."
+		echo -e "Las maquinas virtuales que actualmente estan encendida saldra su nombre en color \e[32mverde\e[0m"
+		echo -e "las que esten apagadas saldran en color \e[31mrojo\e[0m su nombre."
+		echo -e "Escoge una de la lista para ver que opciones hacer con ella."
+		#Estas variables se encarga de los numeros que hay en el menú.
+		NUMOPC=1
+		NUMVMS=0
+		NUMVMON=0
+		rm -Rf "$QTH/funciones/listado/*"
+		#Estos bucles muestra el menú de maquinas virtuales activas
+		VBoxManage list runningvms | tr -t " " ":" > "$QTH/funciones/listado/.vma.txt"
+		VBoxManage list vms | tr -t " " ":" > "$QTH/funciones/listado/.vm.txt"
+		diff "$QTH/funciones/listado/.vm.txt" "$QTH/funciones/listado/.vma.txt" | tr -d "^> " | tr -d "^< " | egrep '^"' > "$QTH/funciones/listado/.vmof.txt"
+		cat "$QTH/funciones/listado/.vma.txt" "$QTH/funciones/listado/.vmof.txt" > "$QTH/funciones/listado/vmls.txt"
+		for LVB in $(cat "$QTH/funciones/listado/.vma.txt")
+		do
+			LVB2=$(echo -e "$LVB" | cut -d '"' -f 2| tr -t ":" " ")
+			if [ "$NUMOPC" -le "9" ]
+			then
+				echo -e "0$NUMOPC. \e[32m$LVB2\e[0m"
+			else
+				echo -e "0$NUMOPC. \e[32m$LVB2\e[0m"
+			fi
+			let NUMOPC=$NUMOPC+1
+			let NUMVMS=$NUMVMS+1
+			let NUMVMON=$NUMVMON+1
+		done
+		for LVB in $(cat "$QTH/funciones/listado/.vmof.txt")
+		do
+			LVB2=$(echo -e "$LVB" | cut -d '"' -f 2 | tr -t ":" " ")
+			if [ "$NUMOPC" -le "9" ]
+			then
+				echo -e "0$NUMOPC. \e[31m$LVB2\e[0m"
+			else
+				echo -e "$NUMOPC. \e[31m$LVB2\e[0m"
+			fi
+			let NUMOPC=$NUMOPC+1
+			let NUMVMS=$NUMVMS+1
+		done
+		let SALIRMENU=$NUMVMS+1
+		if [ "$SALIRMENU" -le "9" ]
+		then
+			echo -e "0$SALIRMENU. Volver al menú principal."
+		else
+			echo -e "$SALIRMENU. Volver al menú principal."
+		fi
+		#Saber que opcion se escoge.
+		read -e -n 2 NUMMENU
+		if [ "$NUMMENU" -le "$NUMVMS" ]
+		then
+			if [ "$NUMMENU" -gt "0" ]
+			then
+				LVB=$(cat "$QTH/funciones/listado/vmls.txt" | cut -d '"' -f 2 | tr -t ":" " ")
+				LVB=$(echo -e "$LVB" | awk "NR==$NUMMENU")
+				BUCL="s"
+				EPRE
+			fi
+		elif [ "$NUMMENU" -eq "$SALIRMENU" ]
+			then
+				BUCL="s"
+				MMENUP
+			else
+				clear
+		fi
+	done
+}
+
+
+#-------------Menú individual para cada maquina virtual.-------------M3---------------
+#En este menú podemos escoger que hacer con una maquina virtual en concreto(apagar,reiniciar..).
+#Hay un if para saber si la maquina esta encendida o apagada.
+function EPRE {
+	BUCL17="n"
+	while [ "$BUCL17" = "n" ]
+	do
+	clear
+	CONFIR="n"
+	BUCL2="n"
+	BUCL3="n"
+	if [ "$NUMMENU" -le "$NUMVMON" ]
+		then
+			while [ "$BUCL2" = "n" ]
+			do
+				clear
+				LVB2=$(cat "$QTH/funciones/listado/vmls.txt" | cut -d "{" -f 2 | tr -d "}" | awk "NR==$NUMMENU")
+				echo -e "Has escogido la maquina virtual llamada '\e[32m$LVB\e[0m'."
+				echo -e "Por favor escoge lo que quieres hacer con ella."
+				echo -e "1. Apagar maquina.\n2. Guardar estado de la Maquina.\n3. Reiniciar Maquina."
+				echo -e "4. Apagar forzadamente la maquina.\n5. Volver al menú anterior. "
+				read -e -n 1 OPCEPRE
+				case "$OPCEPRE"
+				in
+				"1")
+					BUCL2="s"
+					NUMVMON="-1"
+					clear
+					echo -e "Se va a apagar la maquina"
+					VBoxManage controlvm "$LVB2" acpipowerbutton
+				;;
+				"2")
+					BUCL2="s"
+					NUMVMON="-1"
+					clear
+					echo -e "Se va a apagar la maquina guardando su estado"
+					VBoxManage controlvm "$LVB2" savestate
+				;;
+				"3")
+					clear
+					echo -e "Se va a reiniciar la maquina virtual"
+					VBoxManage controlvm "$LVB2" reset
+				;;
+				"4")
+					BUCL2="s"
+					NUMVMON="-1"
+					clear
+					echo -e "Se va a apagar la maquina de forma forzada"
+					VBoxManage controlvm "$LVB2" poweroff
+				;;
+				"5")
+					BUCL2="s"
+					BUCL17="s"
+					MMENU
+
+				;;
+				*)
+					clear
+					echo -e "Por favor debes escoger una opcion validá."
+					sleep 3
+				;;
+				esac
+			done
+		else
+			while [ "$BUCL2" = "n" ]
+			do
+				clear
+				LVB2=$(cat "$QTH/funciones/listado/vmls.txt" | cut -d "{" -f 2 | tr -d "}" | awk "NR==$NUMMENU")
+				echo -e "Has escogido la maquina virtual llamada '\e[31m$LVB\e[0m'."
+				echo -e "Por favor escoge lo que quieres hacer con ella."
+				echo -e "1. Encender maquina virtual.\n2. Eliminar maquina virtual.\n3. Volver al menú anterior."
+				read -e -n 1 OPCEPRE
+				case "$OPCEPRE"
+				in
+				"1")
+					BUCL2="s"
+					NUMVMON="9999999"
+					clear
+					echo -e "Se va a iniciar la maquina virtual."
+					VBoxManage startvm "$LVB2"
+					EPRE
+				;;
+				"2")
+					clear
+					echo -e "Se va a borrar la maquina virtual."
+					COMP
+					if [ "$CONFIR" = "s" ]
+						then
+							BUCL17="s"
+							VBoxManage unregistervm "$LVB2" --delete
+							BUCL2="s"
+							MMENUP
+						else
+							echo -e "Se ha cancelado el borrado de la maquina"
+							sleep 2
+					fi
+				;;
+				"3")
+					BUCL2="s"
+					BUCL17="s"
+					MMENU
+
+				;;
+				*)
+					clear
+					echo -e "Por favor debes escoger una opcion validá."
+					sleep 3
+				;;
+				esac
+			done
+	fi
+	done
+}
+
+#Esta funcion pregunta si estas seguro o no de eliminar una maquina virtual.
+function COMP {
+	BUCL3="n"
+	while [ "$BUCL3" = "n" ]
+	do
+		read -e -p "¿Estas seguro?(s/n)" -n 1 CONF3
+		case "$CONF3"
+		in
+		"s")
+			BUCL3="s"
+			CONFIR="s"
+		;;
+		"n")
+			BUCL3="s"
+		;;
+		*)
+			BUCL3="n"
+		;;
+		esac
+	done
+}
+
+#Esta función es para atrapar la señal de parar el proceso cuando el usuario intenta matarlo.
+#Una vez atrapado le preguntara si quiere continuar o no desde otro script.
+function STINT {
+	bash "$QTH/funciones/ControlPR"
+	wait
+}
+
+#Menú para crear maquinas virtuales preconfiguradas.
+function EDRP {
+
+	BUCLED3="n"
+	while [ "$BUCLED3" = "n" ]
+	do
+		clear
+		echo -e "Este menú permite crear maquinas virtuales preconfiguradas con lo recomendado."
+		echo -e "1. Windows 10.\n2. Windows 7.\n3. Debian.\n4. Ubuntu.\n5. OpenSUSE.\n6. Fedora.\n7. Volver al menú principal."
+		read -e -n 1 NUMOPCED7
+		case "$NUMOPCED7"
+		in
+		"1")
+			BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de Windows 10-----------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 2 nucleos.\n-Memoria RAM: 2048MB.\n-Disco duro: 50GB.\n-Almacenamientos: Tipo SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Windows 10."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="Windows10_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="Windows10"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de Windows 10 fue creada con un script."
+		RAMVM="2048"
+		CPUVM="2"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "50000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"2")
+		BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de Windows 7------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 2 nucleos.\n-Memoria RAM: 2048MB.\n-Disco duro: 35GB.\n-Almacenamientos: Tipo SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Windows 7."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="Windows7_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="Windows7"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de Windows 7 fue creada con un script."
+		RAMVM="2048"
+		CPUVM="2"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "35000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"3")
+		BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de Debian---------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 1 nucleos.\n-Memoria RAM: 1024MB.\n-Disco duro: 10GB.\n-Almacenamientos: Tipo IDE/SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Debian."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="Debian_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="Debian"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de Debian fue creada con un script."
+		RAMVM="1024"
+		CPUVM="1"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "10000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storagectl "$NAMEVM" --name "Controlador IDE" --add ide
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"4")
+		BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de Ubuntu---------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 1 nucleos.\n-Memoria RAM: 1024MB.\n-Disco duro: 12GB.\n-Almacenamientos: Tipo IDE/SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Ubuntu."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="Ubuntu_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="Ubuntu"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de Ubuntu fue creada con un script."
+		RAMVM="1024"
+		CPUVM="1"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "12000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storagectl "$NAMEVM" --name "Controlador IDE" --add ide
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"5")
+			BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de OpenSUSE-------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 2 nucleos.\n-Memoria RAM: 2048MB.\n-Disco duro: 30GB.\n-Almacenamientos: Tipo IDE/SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Ubuntu."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="OpenSUSE_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="OpenSUSE"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de OpenSUSE fue creada con un script."
+		RAMVM="2048"
+		CPUVM="2"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "30000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storagectl "$NAMEVM" --name "Controlador IDE" --add ide
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"6")
+			BUCIFNT7="n"
+			while [ "$BUCIFNT7" = "n" ]
+			do
+				clear
+				echo -e "----------Preconfiguracion de Fedora---------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "-CPU: 2 nucleos.\n-Memoria RAM: 2048MB.\n-Disco duro: 15GB.\n-Almacenamientos: Tipo IDE/SATAS.\n-Memoria Grafica 128MB."
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "---------------------------------------------------"
+				sleep 0.3
+				echo -e "Confirma que estas de acuerdo con esta configuración(s/n)."
+				read -e -n 1 OPIFNT8
+				case "$OPIFNT8"
+				in
+				"s")
+					BUCIFNT7="s"
+					clear
+				;;
+				"n")
+					BUCLED3="s"
+					BUCIFNT7="s"
+					EDRP
+				;;
+				*)
+				;;
+				esac
+			done
+			BUCLEDOSIN="n"
+			while [ "$BUCLEDOSIN" = "n" ]
+			do
+				echo -e "Se va a crear una maquina virtual para un sistema operativo Ubuntu."
+				sleep 0.3
+				echo -e "Por favor introduzca un nombre para la maquina, este nombre no puede estar ocupado."
+				read -e -p "=> " NAMEVM
+				if [ -n "$NAMEVM" ]
+				then
+					echo -e "Se va a iniciar el proceso de configuración, por favor espere."
+					BUCLED3="s"
+					BUCLEDOS="n"
+					while [ "$BUCLEDOS" = "n" ]
+					do
+						echo -e "¿Quieres que esta maquina sea de 64 bits o 32 bits?(En caso de duda escoge 32 bits)"
+						echo -e "1. 64 Bits\n2. 32 Bits."
+						read -e -n 1 OPBIT
+						case "$OPBIT"
+						in
+						"1")
+							TOSVM="Fedora_64"
+							BUCLEDOS="s"
+						;;
+						"2")
+							TOSVM="Fedora"
+							BUCLEDOS="s"
+						;;
+						*)
+						;;
+						esac
+					done
+					BUCLEDOSIN="s"
+				else
+					echo -e "Debes introducir un nombre para poder crear la maquina."
+					sleep 2
+				fi
+			done
+		HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+		DESCVM="Esta maquina de Fedora fue creada con un script."
+		RAMVM="2048"
+		CPUVM="2"
+		VBoxManage createvm --name "$NAMEVM" --register
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "15000" --format VDI
+		VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+		VBoxManage storagectl "$NAMEVM" --name "Controlador IDE" --add ide
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+		VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 1 --device 0 --type dvddrive --medium emptydrive
+		VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+		VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+		VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       	VBoxManage modifyvm "$NAMEVM" --vram 128
+       	VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       	VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       	VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       	VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       	VBoxManage modifyvm "$NAMEVM" --ioapic on
+       	VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+       	echo -e "Se ha terminado de crear la maquina virtual se volvera al menú principal"
+       	sleep 3
+       	MMENUP
+		;;
+		"7")
+		echo -e "Volviendo al menú principal"
+		BUCLED3="s"
+		MMENUP
+		;;
+		*)
+		;;
+	esac
+	done
+}
+
+#--------Menú para crear maquinas virtuales de forma manual---------
+function CREARVMD {
+	BUCLED2="n"
+	while [ "$BUCLED2" = "n" ]
+	do
+		clear
+		echo -e "Por favor introduzca el nombre que quieres que tenga la maquina virtual."
+		read -e -p "=> " NAMEVM
+		if [ -n "$NAMEVM" ]
+		then
+			VBoxManage createvm --name "$NAMEVM" --register
+			BUCLED2="s"
+		else
+			echo -e "No dejes la variable vacia por favor"
+			sleep 2
+		fi
+	done
+	BUCLED2="n"
+	HDDVM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+	while [ "$BUCLED2" = "n" ]
+	do
+		clear
+		echo -e "Ahora introduzca el tamaño que va a tener usando los numeros y la unidad MegaByte sin '.'"
+		read -e -p "=> " HDDTM
+		if ! [[ "$HDDTM" =~ ^[0-9]+$ ]]
+    	then
+       		echo -e "Solo se permite introducir datos numericos"
+       		sleep 2
+       	else
+       		BUCLED2="s"
+		fi
+		done
+		BUCLED2="n"
+		VBoxManage createhd --filename "$HDDVM.vdi" --size "$HDDTM" --format VDI
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "¿Quieres que el disco duro sea SATA o IDE?"
+			echo -e "En caso de ser las ultimas versiones de Windows por favor escoge SATA."
+			echo -e "1. Sata\n2. IDE"
+			read -e -n 1 OPCEDRT1
+			case "$OPCEDRT1"
+			in
+			"1")
+				VBoxManage storagectl "$NAMEVM" --name "Controlador SATA" --add sata
+				VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+				BUCLED2="s"
+			;;
+			"2")
+				VBoxManage storagectl "$NAMEVM" --name "Controlador IDE" --add ide
+				VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 0 --device 0 --type hdd --medium "$HDDVM.vdi"
+				BUCLED2="s"
+			;;
+			*)
+			;;
+			esac
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "¿Quieres que el lector de cd sea SATA o IDE?"
+			echo -e "En caso de ser las ultimas versiones de Windows por favor escoge SATA."
+			echo -e "1. Sata\n2. IDE"
+			read -e -n 1 OPCEDRT1
+			case "$OPCEDRT1"
+			in
+			"1")
+				VBoxManage storageattach "$NAMEVM" --storagectl "Controlador SATA" --port 1 --device 0 --type dvddrive --medium emptydrive
+				BUCLED2="s"
+			;;
+			"2")
+				VBoxManage storageattach "$NAMEVM" --storagectl "Controlador IDE" --port 1 --device 0 --type dvddrive --medium emptydrive
+				BUCLED2="s"
+			;;
+			*)
+			;;
+			esac
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "Introduce la cantidad de RAM que quieres asignar a la maquina, usa la unidad MegaByte."
+			read -e -p "=> " RAMVM
+			if ! [[ "$RAMVM" =~ ^[0-9]+$ ]]
+    		then
+       			echo -e "Solo se permite introducir datos numericos"
+       			sleep 2
+       		else
+       			VBoxManage modifyvm "$NAMEVM" --memory "$RAMVM"
+       			VBoxManage modifyvm "$NAMEVM" --vram 128
+       			VBoxManage modifyvm "$NAMEVM" --nic1 nat
+       			BUCLED2="s"
+			fi
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "¿Cuantos nucleos de tu cpu quieres dedicarle a esta maquina?"
+			read -e -p "=> " CPUVM
+			if ! [[ "$CPUVM" =~ ^[0-9]+$ ]]
+    		then
+       			echo -e "Solo se permite introducir datos numericos"
+       			sleep 2
+       		else
+       			VBoxManage modifyvm "$NAMEVM" --cpus "$CPUVM"
+       			VBoxManage modifyvm "$NAMEVM" --cpuexecutioncap 100
+       			VBoxManage modifyvm "$NAMEVM" --hwvirtex on
+       			VBoxManage modifyvm "$NAMEVM" --ioapic on
+       			BUCLED2="s"
+			fi
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "Escribe una descripcion para esta maquina virtual"
+			read -e -p "=> " DESCVM
+			if [ -n "DESCVM" ]
+			then
+				VBoxManage modifyvm "$NAMEVM" --description "$DESCVM"
+				BUCLED2="s"
+			else
+				echo -e "Por favor debes introducir algo."
+				sleep 2
+			fi
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "Indica si prefieres que inicie primero la unidad de dvd o el disco duro."
+			echo -e "1. Disco Duro.\n2. Lector de DVD."
+			read -e -n 1 ORDENVM
+			case "$ORDENVM"
+			in
+			"1")
+				VBoxManage modifyvm "$NAMEVM" --boot1 disk --boot2 dvd --boot3 none --boot4 none
+				BUCLED2="s"
+			;;
+			"2")
+				VBoxManage modifyvm "$NAMEVM" --boot1 dvd --boot2 disk --boot3 none --boot4 none
+				BUCLED2="s"
+			;;
+			*)
+			;;
+			esac
+		done
+		BUCLED2="n"
+		while [ "$BUCLED2" = "n" ]
+		do
+			clear
+			echo -e "A continuacion se va abrir una lista donde vendran todos los tipos de maquinas virtuales disponible,"
+			sleep 0.3
+			echo -e "Debe escribir el ID del sistema deseado de forma exacta, si no introduces nada se repetira esta parte."
+			sleep 6
+			VBoxManage list ostypes | less
+			clear
+			echo -e "Introduce el ID:"
+			read -e -p "=> " TOSVM
+			if [ -n "$TOSVM" ]
+			then
+				VBoxManage modifyvm "$NAMEVM" --ostype "$TOSVM"
+				BUCLED2="s"
+			else
+				echo -e "No has introducido ningun dato se repetira el proceso."
+				sleep 2
+			fi
+		done
+		BUCLED2="n"
+		MMENUP
+}

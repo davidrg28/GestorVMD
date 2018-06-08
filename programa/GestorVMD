@@ -1,0 +1,34 @@
+#!/bin/bash
+
+<<C1
+Este es el script inicial, hace una comprobacion de si esta instalado el script para poder funcionar.
+Comprueba que se ejecuta sin argumentos.
+C1
+
+#Activa el modo monitor de bash.
+set -m
+
+#Ruta con las funciones.
+QTH="$(dirname "${BASH_SOURCE[0]}")"
+. "$QTH/funciones/FuncionesGVMD"
+
+#Atrapa las señales de control+c y control+z.
+trap STINT SIGINT
+trap "" SIGTSTP
+
+#Inicio del comando.
+if [ "$#" -eq "0" ]
+then
+	if [ -e "$QTH/funciones/ControlPR" ]
+	then
+		sed "3iPIDCR=$$" "$QTH/funciones/.ControlPRL" > "$QTH/funciones/ControlPR"
+		MMENUP
+	else
+		clear
+		echo -e "Este script requiere instalarse con su instalador para un funcionamiento correcto."
+	fi
+else
+	clear
+	echo -e "Este script no permite ejecutarse con argumentos."
+fi
+
