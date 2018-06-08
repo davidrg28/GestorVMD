@@ -1,0 +1,32 @@
+#!/bin/bash
+
+
+
+#Activa el modo monitor de bash
+set -m
+
+PIDCRT="$$"
+
+#Bucle para preguntar al usuario si quiere matar el proceso o no.
+BUCLFN="n"
+	while [ "$BUCLFN" = "n" ]
+	do
+		clear
+		echo -e "¿Estas seguro de que quieres cancelar el progama?(s/n)"
+		read -e -p "=> " -n 1 FNOPC
+		case "$FNOPC"
+		in
+		"s")
+			BUCLFN="s"
+			killall GestorVMD
+			clear
+			echo -e "Se va a parar el proceso."
+		;;
+		"n")
+			BUCLFN="s"
+			echo -e "El script va a continuar por donde estaba."
+			echo -e "Pulsa cualquier tecla para volver al estado anterior."
+		;;
+		*)
+		esac
+	done
