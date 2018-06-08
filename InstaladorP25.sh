@@ -43,15 +43,16 @@ if [ "$#" -eq "0" ]
 					read -e -p "=> " DIRUSR
 					DIRDS=".$DIRUSR"
 				else
-					mkdir "$DIRDS"
-					cd "$UBC/programa"
-					cp -Rf * "$HOME/$DIRDS"
-					cp -Rf "funciones/.ControlPRL" "$HOME/$DIRDS/funciones/ControlPR"
-					cd "$HOME"
-					chmod -R 700 "$DIRDS"
 					BUCL="s"
-			fi
+				fi
 		done
+		mkdir "$DIRDS"
+		cd "$UBC/programa"
+		cp -Rf * "$HOME/$DIRDS"
+		cp -Rf "funciones/.ControlPRL" "$HOME/$DIRDS/funciones/ControlPR"
+		mkdir "$HOME/$DIRDS/listado"
+		cd "$HOME"
+		chmod -R 700 "$DIRDS"
 		COMB
 	else
 		clear
